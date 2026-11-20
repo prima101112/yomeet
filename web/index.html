@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>YoMeet</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='13' fill='%23c96442'/></svg>">
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+<style>
+:root {
+  --bg: #f7f5f0; --panel: #ffffff; --ink: #1f1d1a; --muted: #6f6a61; --line: #e6e1d6;
+  --accent: #c96442; --accent-ink: #ffffff; --ok: #2f7d4f; --warn: #a86b12; --err: #b3372f;
+  --code: #f1ede4; --radius: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #1b1a18; --panel: #242320; --ink: #ece8e0; --muted: #a39d92; --line: #36342f;
+          --accent: #d97757; --ok: #5cb77f; --warn: #d9a441; --err: #e0675d; --code: #2d2b27; }
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { display: flex; align-items: center; gap: 12px; padding: 16px 24px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 2; }
+.logo { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); flex: none; }
+header h1 { font-size: 18px; margin: 0; }
+header .sub { color: var(--muted); font-size: 13px; }
+nav { margin-left: auto; display: flex; gap: 4px; }
+nav button { background: none; border: 0; padding: 8px 12px; border-radius: 8px; color: var(--muted); font: inherit; cursor: pointer; }
+nav button.active { background: var(--code); color: var(--ink); font-weight: 600; }
+main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
+section[hidden] { display: none; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; }
+.card h2 { font-size: 16px; margin: 0 0 12px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+input[type=text], input[type=password], select, textarea {
+  font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; width: 100%; }
+textarea { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; min-height: 320px; resize: vertical; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.btn { font: inherit; font-weight: 600; border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 9px 16px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.danger { color: var(--err); }
+.btn:disabled { opacity: .55; cursor: default; }
+.btn.small { padding: 5px 10px; font-size: 13px; }
+.grow { flex: 1 1 260px; }
+.muted { color: var(--muted); font-size: 13px; }
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 99px; background: var(--code); color: var(--muted); }
+.pill.live { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+.pill.wait { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.pill.err { background: color-mix(in srgb, var(--err) 18%, transparent); color: var(--err); }
+.bot { border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-top: 12px; }
+.bot .url { font-family: ui-monospace, monospace; font-size: 13px; word-break: break-all; }
+pre.log { background: var(--code); border-radius: 8px; padding: 10px 12px; font-size: 12px; line-height: 1.45; max-height: 280px; overflow: auto; white-space: pre-wrap; word-break: break-word; margin: 10px 0 0; }
+.layout { display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start; }
+@media (max-width: 820px) { .layout { grid-template-columns: 1fr; } nav { margin-left: 0; } header { flex-wrap: wrap; } }
+.list { list-style: none; margin: 0; padding: 0; }
+.list li { padding: 10px 12px; border-radius: 8px; cursor: pointer; }
+.list li:hover { background: var(--code); }
+.list li.active { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.list .t { font-weight: 600; }
+.notes { overflow-wrap: anywhere; }
+.notes h1 { font-size: 22px; margin-top: 0; }
+.notes h2 { font-size: 17px; margin-top: 22px; }
+.notes pre { background: var(--code); padding: 10px; border-radius: 8px; overflow: auto; font-size: 12px; white-space: pre-wrap; }
+.notes code { background: var(--code); padding: 1px 4px; border-radius: 4px; }
+.fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.field label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+.field .help { color: var(--muted); font-size: 12px; margin-top: 4px; }
+.set { color: var(--ok); font-weight: 600; font-size: 12px; }
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: calc(100% - 32px); }
+.toast.show { opacity: 1; }
+.empty { color: var(--muted); padding: 24px; text-align: center; }
+.result { font-size: 13px; margin-top: 8px; }
+.result.ok { color: var(--ok); } .result.bad { color: var(--err); }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"></div>
+  <div><h1>YoMeet</h1><div class="sub">Google Meet bot · notes · Q&amp;A</div></div>
+  <nav>
+    <button data-tab="meet" class="active">Meetings</button>
+    <button data-tab="memory">Memory</button>
+    <button data-tab="settings">Settings</button>
+  </nav>
+</header>
+
+<main>
+  <section id="tab-meet">
+    <div class="card">
+      <h2>Send YoMeet to a call</h2>
+      <form id="join" class="row">
+        <input class="grow" type="text" id="url" placeholder="https://meet.google.com/abc-defg-hij" autocomplete="off" required>
+        <label class="row" style="gap:6px;flex:none" for="bot-name"><span class="muted">as</span>
+          <select id="bot-name" style="width:auto">
+            <option>Jarvis</option><option>Nova</option><option>YoMeet</option><option value="__custom">Other name…</option>
+          </select></label>
+        <input type="text" id="bot-name-custom" placeholder="Bot name" maxlength="30" autocomplete="off" style="width:150px" hidden>
+        <button class="btn primary" type="submit">Join</button>
+      </form>
+      <p class="muted" id="name-tip" style="margin:6px 0 0"></p>
+      <p class="muted"><span id="join-as">The bot asks to join as a guest</span>, so admit it from the meeting. Press Stop (or end the call) and it writes the notes.</p>
+      <div id="bots"></div>
+    </div>
+
+    <div class="layout">
+      <div class="card">
+        <h2>Past meetings</h2>
+        <ul class="list" id="meetings"></ul>
+      </div>
+      <div class="card">
+        <div class="row" style="justify-content:space-between">
+          <span class="muted" id="notes-file"></span>
+          <span class="row" id="notes-actions" hidden>
+            <button class="btn small" id="copy-notes">Copy</button>
+            <button class="btn small danger" id="delete-notes">Delete</button>
+          </span>
+        </div>
+        <div class="notes" id="notes"><div class="empty">Select a meeting to read its notes.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-memory" hidden>
+    <div class="card">
+      <h2>Memory</h2>
+      <p class="muted">YoMeet adds to this file when someone says "YoMeet, remember…" and reads it when asked about earlier context. You can edit it here. It's saved to <code id="mem-path"></code>.</p>
+      <textarea id="memory" spellcheck="false"></textarea>
+      <div class="row" style="margin-top:12px"><button class="btn primary" id="save-memory">Save memory</button></div>
+    </div>
+  </section>
+
+  <section id="tab-settings" hidden>
+    <div class="card" id="google">
+      <h2>Google account</h2>
+      <div id="g-status" class="muted">Loading…</div>
+      <ol class="muted" id="g-steps" hidden style="padding-left:20px">
+        <li id="g-vnc-step">Open the <a id="g-vnc" target="_blank" rel="noopener">server screen</a>. A Chrome window on Google's sign-in page is open there.</li>
+        <li id="g-novnc-step">A Chrome window on Google's sign-in page opened on the server's display. Reach it with your VNC viewer (set <code>VNC_URL</code> in <code>.env</code> to get a link here).</li>
+        <li>Sign in with the account YoMeet should use. A separate Gmail just for the bot is best.</li>
+        <li>Come back here and press <b>Done</b>. Don't close the window in VNC.</li>
+      </ol>
+      <div class="row" style="margin-top:12px" id="g-actions"></div>
+    </div>
+    <form id="settings"></form>
+  </section>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+async function api(path, opts = {}) {
+  const r = await fetch('api/' + path, {
+    ...opts,
+    headers: { 'content-type': 'application/json', 'x-yomeet': '1', ...(opts.headers || {}) },
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || r.statusText);
+  return data;
+}
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// ---- tabs ----
+document.querySelectorAll('nav button').forEach((b) => b.onclick = () => {
+  document.querySelectorAll('nav button').forEach((x) => x.classList.toggle('active', x === b));
+  document.querySelectorAll('main > section').forEach((s) => s.hidden = s.id !== 'tab-' + b.dataset.tab);
+  if (b.dataset.tab === 'memory') loadMemory();
+  if (b.dataset.tab === 'settings') loadSettings();
+});
+
+// ---- bots ----
+const openLogs = new Set();
+function pillClass(s) {
+  if (s === 'in call') return 'live';
+  if (/exited|failed/.test(s)) return 'err';
+  if (/waiting|joining|starting|leaving|writing/.test(s)) return 'wait';
+  return '';
+}
+async function refreshBots() {
+  let list;
+  try { list = await api('bots'); } catch { return; }
+  const el = $('#bots');
+  const scrolls = {};
+  el.querySelectorAll('pre.log').forEach((p) => scrolls[p.dataset.id] = p.scrollHeight - p.scrollTop - p.clientHeight < 30);
+  const details = await Promise.all(list.map((b) => openLogs.has(b.id) || b.running ? api('bots/' + b.id).catch(() => b) : b));
+  el.innerHTML = details.map((b) => `
+    <div class="bot">
+      <div class="row" style="justify-content:space-between">
+        <div><span class="pill ${pillClass(b.status)}">${esc(b.status)}</span>
+          <b>${esc(b.name || '')}</b> <span class="url">${esc(b.url)}</span>
+          <div class="muted">started ${new Date(b.startedAt).toLocaleString()}</div></div>
+        <div class="row">
+          ${b.notesFile ? `<button class="btn small" data-open="${esc(b.notesFile)}">Open notes</button>` : ''}
+          <button class="btn small" data-logs="${b.id}">${openLogs.has(b.id) || b.running ? 'Hide log' : 'Show log'}</button>
+          ${b.running ? `<button class="btn small danger" data-stop="${b.id}">Stop &amp; write notes</button>`
+                      : `<button class="btn small" data-remove="${b.id}">Dismiss</button>`}
+        </div>
+      </div>
+      ${(openLogs.has(b.id) || b.running) && b.logs ? `<pre class="log" data-id="${b.id}">${esc(b.logs.join('\n'))}</pre>` : ''}
+    </div>`).join('');
+  el.querySelectorAll('pre.log').forEach((p) => { if (scrolls[p.dataset.id] !== false) p.scrollTop = p.scrollHeight; });
+  if (list.some((b) => b.notesFile)) loadMeetings();
+}
+$('#bots').onclick = async (e) => {
+  const t = e.target.closest('button'); if (!t) return;
+  try {
+    if (t.dataset.stop) { t.disabled = true; await api(`bots/${t.dataset.stop}/stop`, { method: 'POST' }); toast('Leaving the call and writing notes…'); }
+    if (t.dataset.remove) await api('bots/' + t.dataset.remove, { method: 'DELETE' });
+    if (t.dataset.logs) { openLogs.has(t.dataset.logs) ? openLogs.delete(t.dataset.logs) : openLogs.add(t.dataset.logs); }
+    if (t.dataset.open) openMeeting(t.dataset.open);
+  } catch (err) { toast(err.message); }
+  refreshBots();
+};
+// ---- bot name picker (remembered per browser) ----
+const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+function chosenName() { return $('#bot-name').value === '__custom' ? $('#bot-name-custom').value.trim() : $('#bot-name').value; }
+function syncName() {
+  $('#bot-name-custom').hidden = $('#bot-name').value !== '__custom';
+  const n = chosenName() || 'the bot';
+  $('#name-tip').textContent = `With others in the call, start with its name: "${n}, what did we decide?" Just you and ${n}? Then you can just talk.`;
+}
+(function initName() {
+  const saved = store.get('yomeet.botName');
+  if (saved) {
+    const opt = [...$('#bot-name').options].find((o) => o.value === saved);
+    if (opt) $('#bot-name').value = saved; else { $('#bot-name').value = '__custom'; $('#bot-name-custom').value = saved; }
+  }
+  $('#bot-name').onchange = () => { syncName(); if ($('#bot-name').value === '__custom') $('#bot-name-custom').focus(); };
+  $('#bot-name-custom').oninput = syncName;
+  syncName();
+})();
+
+$('#join').onsubmit = async (e) => {
+  e.preventDefault();
+  const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
+  const name = chosenName();
+  try {
+    if (!name) throw new Error('Type a name for the bot');
+    const bot = await api('bots', { method: 'POST', body: { url: $('#url').value, name } });
+    store.set('yomeet.botName', name);
+    openLogs.add(bot.id); $('#url').value = ''; toast(`${name} is on its way. Admit it in Meet.`);
+  } catch (err) { toast(err.message); }
+  btn.disabled = false; refreshBots();
+};
+
+// ---- meetings ----
+let current = null;
+async function loadMeetings() {
+  const list = await api('meetings').catch(() => []);
+  $('#meetings').innerHTML = list.length ? list.map((m) => `
+    <li data-file="${esc(m.file)}" class="${m.file === current ? 'active' : ''}">
+      <div class="t">${esc(m.title)}</div>
+      <div class="muted">${new Date(m.modified).toLocaleString()}</div>
+    </li>`).join('') : '<div class="empty">No meetings yet.</div>';
+}
+$('#meetings').onclick = (e) => { const li = e.target.closest('li'); if (li) openMeeting(li.dataset.file); };
+async function openMeeting(file) {
+  try {
+    const { content } = await api('meetings/' + encodeURIComponent(file));
+    current = file;
+    $('#notes').innerHTML = DOMPurify.sanitize(marked.parse(content));
+    $('#notes-file').textContent = file;
+    $('#notes-actions').hidden = false;
+    $('#notes').dataset.raw = content;
+    loadMeetings();
+  } catch (err) { toast(err.message); }
+}
+$('#copy-notes').onclick = async () => { await navigator.clipboard.writeText($('#notes').dataset.raw || ''); toast('Notes copied'); };
+$('#delete-notes').onclick = async () => {
+  if (!current || !confirm(`Delete ${current}? This can't be undone.`)) return;
+  await api('meetings/' + encodeURIComponent(current), { method: 'DELETE' }).catch((e) => toast(e.message));
+  current = null; $('#notes').innerHTML = '<div class="empty">Deleted.</div>'; $('#notes-actions').hidden = true; $('#notes-file').textContent = '';
+  loadMeetings();
+};
+
+// ---- memory ----
+async function loadMemory() {
+  const [{ content }, s] = await Promise.all([api('memory'), api('settings')]);
+  $('#memory').value = content; $('#mem-path').textContent = s.workspace + '/memory.md';
+}
+$('#save-memory').onclick = async () => {
+  try { await api('memory', { method: 'PUT', body: { content: $('#memory').value } }); toast('Memory saved'); } catch (e) { toast(e.message); }
+};
+
+// ---- google account ----
+async function loadGoogle() {
+  let g; try { g = await api('google'); } catch { return; }
+  $('#join-as').textContent = g.signedIn ? `The bot joins as ${g.account || 'its Google account'}` : 'The bot asks to join as a guest (no Google account)';
+  if (!$('#g-status')) return;
+  $('#g-vnc').href = g.vncUrl || '#';
+  $('#g-vnc-step').hidden = !g.vncUrl; $('#g-novnc-step').hidden = !!g.vncUrl;
+  $('#g-steps').hidden = !g.loginOpen;
+  $('#g-status').innerHTML = g.loginOpen ? 'The sign-in window is open on the server.'
+    : g.signedIn ? `<span class="set">✓ Signed in</span> as <b>${esc(g.account || 'unknown account')}</b>. Bots join Meet with this account.`
+    : 'Not signed in. YoMeet joins as an anonymous guest, which Google often refuses from a server ("You can\'t join this video call"). Sign it in to a Google account to fix that.';
+  $('#g-actions').innerHTML = g.loginOpen
+    ? `${g.vncUrl ? `<a class="btn" href="${esc(g.vncUrl)}" target="_blank" rel="noopener">Open server screen</a>` : ''}<button class="btn primary" id="g-done">Done</button>`
+    : `<button class="btn ${g.signedIn ? '' : 'primary'}" id="g-login">${g.signedIn ? 'Sign in again / switch account' : 'Sign in to Google'}</button>`
+      + (g.signedIn ? '<button class="btn danger" id="g-logout">Sign out</button>' : '');
+  const on = (id, fn) => { const b = $('#' + id); if (b) b.onclick = async () => { b.disabled = true; try { await fn(); } catch (e) { toast(e.message); } loadGoogle(); }; };
+  on('g-login', async () => { const r = await api('google/login', { method: 'POST' }); if (r.vncUrl) window.open(r.vncUrl, '_blank', 'noopener'); });
+  on('g-done', async () => {
+    const r = await api('google/done', { method: 'POST' });
+    toast(r.result?.signedIn ? `Signed in${r.result.email ? ' as ' + r.result.email : ''}` : r.result?.signedIn === false ? 'No Google sign-in found; still a guest' : 'Window closed');
+  });
+  on('g-logout', async () => { if (confirm('Sign YoMeet out of Google? It will join as a guest again.')) await api('google/logout', { method: 'POST' }); });
+}
+
+// ---- settings ----
+async function loadSettings() {
+  loadGoogle();
+  const { fields, workspace } = await api('settings');
+  const groups = [...new Set(fields.map((f) => f.group))];
+  $('#settings').innerHTML = groups.map((g) => `
+    <div class="card">
+      <h2>${esc(g)}</h2>
+      <div class="fields">${fields.filter((f) => f.group === g).map(fieldHtml).join('')}</div>
+      ${g === 'Keys' ? `<div class="row" style="margin-top:16px">
+          <button type="button" class="btn small" id="test-11">Test ElevenLabs</button>
+          <button type="button" class="btn small" id="test-claude">Test Claude</button></div>
+        <div class="result" id="test-result"></div>` : ''}
+      ${g === 'Brain' ? `<p class="muted" style="margin-top:12px">Workspace: <code>${esc(workspace)}</code>. YoMeet's Claude Code can only see this folder.</p>` : ''}
+    </div>`).join('') + `<div class="row"><button class="btn primary" type="submit">Save settings</button>
+      <span class="muted">Applies to the next bot you start.</span></div>`;
+  $('#test-11').onclick = () => runTest('elevenlabs', $('#test-11'));
+  $('#test-claude').onclick = () => runTest('claude', $('#test-claude'));
+  $('#settings').querySelectorAll('[data-clear]').forEach((b) => b.onclick = async () => {
+    if (!confirm('Remove this key?')) return;
+    await api('settings', { method: 'PUT', body: { [b.dataset.clear]: null } }); toast('Removed'); loadSettings();
+  });
+}
+function fieldHtml(f) {
+  const id = 'f-' + f.key;
+  let input;
+  if (f.options) input = `<select id="${id}" name="${f.key}"><option value="">(default)</option>${f.options.map((o) => `<option ${o === f.value ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
+  else if (f.secret) input = `<input type="password" id="${id}" name="${f.key}" autocomplete="off" placeholder="${f.isSet ? 'Saved: ' + esc(f.masked) + '. Type to replace' : 'Not set'}">`;
+  else input = `<input type="text" id="${id}" name="${f.key}" value="${esc(f.value)}" autocomplete="off">`;
+  return `<div class="field">
+    <label for="${id}">${esc(f.label)} ${f.secret && f.isSet ? '<span class="set">✓ saved</span>' : ''}
+      ${f.secret && f.isSet ? `<button type="button" class="btn small" style="padding:0 6px;margin-left:6px" data-clear="${f.key}">remove</button>` : ''}</label>
+    ${input}${f.help ? `<div class="help">${esc(f.help)}</div>` : ''}</div>`;
+}
+$('#settings').onsubmit = async (e) => {
+  e.preventDefault();
+  const patch = {};
+  new FormData(e.target).forEach((v, k) => patch[k] = String(v));
+  try { await api('settings', { method: 'PUT', body: patch }); toast('Settings saved'); loadSettings(); } catch (err) { toast(err.message); }
+};
+async function runTest(which, btn) {
+  const out = $('#test-result'); btn.disabled = true;
+  out.className = 'result'; out.textContent = which === 'claude' ? 'Asking Claude (up to a minute)…' : 'Testing…';
+  try { const r = await api('test/' + which, { method: 'POST' }); out.className = 'result ' + (r.ok ? 'ok' : 'bad'); out.textContent = r.message; }
+  catch (e) { out.className = 'result bad'; out.textContent = e.message; }
+  btn.disabled = false;
+}
+
+refreshBots(); loadMeetings(); loadGoogle();
+setInterval(refreshBots, 2500);
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Runs the bot; uses a virtual display (Xvfb) when there's no real one.
+cd "$(dirname "$0")/.."
+if [ -z "$DISPLAY" ] && [ "$HEADLESS" != "true" ]; then
+  exec xvfb-run -a -s "-screen 0 1280x800x24" npx tsx src/index.ts "$@"
+fi
+exec npx tsx src/index.ts "$@"

@@ -1,0 +1,24 @@
+# systemd user unit for the YoMeet dashboard.
+# Install: edit the two paths below, copy to ~/.config/systemd/user/yomeet.service, then
+#   systemctl --user daemon-reload && systemctl --user enable --now yomeet
+#   loginctl enable-linger "$USER"     # keep it running after you log out
+[Unit]
+Description=YoMeet dashboard (Google Meet bot manager)
+After=network-online.target docker.service
+
+[Service]
+# Path to your yomeet checkout (%h = your home directory)
+WorkingDirectory=%h/yomeet
+# Absolute path to node (`which node`); its directory must also be on PATH below
+ExecStart=/usr/bin/node --import tsx src/server.ts
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+Environment=PORT=8090
+Environment=HOST=127.0.0.1
+# On stop: SIGTERM the server, which tells running bots to leave and write notes.
+KillMode=mixed
+TimeoutStopSec=120
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

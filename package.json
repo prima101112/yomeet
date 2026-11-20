@@ -1,0 +1,47 @@
+{
+  "name": "yomeet",
+  "version": "1.0.0",
+  "description": "A Google Meet bot that joins your calls, answers questions out loud (ElevenLabs voice + Claude) and writes meeting notes.",
+  "scripts": {
+    "start": "bin/yomeet",
+    "typecheck": "tsc -p .",
+    "test:audio": "tsx test/audio-loopback.ts",
+    "test:meet": "tsx test/meet-smoke.ts",
+    "test:voice": "tsx test/voice-roundtrip.ts",
+    "test:brain": "tsx test/brain.ts",
+    "server": "tsx src/server.ts",
+    "test:captions": "tsx test/captions-probe.ts",
+    "setup": "bash scripts/setup.sh",
+    "check": "bash scripts/setup.sh --check"
+  },
+  "keywords": [
+    "google-meet",
+    "meeting-notes",
+    "voice-assistant",
+    "claude",
+    "claude-code",
+    "elevenlabs",
+    "playwright"
+  ],
+  "author": "prima101112",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.10.0",
+    "dotenv": "^18.0.10",
+    "playwright": "^1.65.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/prima101112/yomeet.git"
+  }
+}
