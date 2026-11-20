@@ -135,9 +135,10 @@ pre.log { background: var(--code); border-radius: 8px; padding: 10px 12px; font-
       <div id="g-status" class="muted">Loading…</div>
       <ol class="muted" id="g-steps" hidden style="padding-left:20px">
         <li id="g-vnc-step">Open the <a id="g-vnc" target="_blank" rel="noopener">server screen</a>. A Chrome window on Google's sign-in page is open there.</li>
+        <li id="g-screen-step">A Chrome window on Google's sign-in page opened on your screen.</li>
         <li id="g-novnc-step">A Chrome window on Google's sign-in page opened on the server's display. Reach it with your VNC viewer (set <code>VNC_URL</code> in <code>.env</code> to get a link here).</li>
         <li>Sign in with the account YoMeet should use. A separate Gmail just for the bot is best.</li>
-        <li>Come back here and press <b>Done</b>. Don't close the window in VNC.</li>
+        <li>Come back here and press <b>Done</b>. Don't close the sign-in window yourself.</li>
       </ol>
       <div class="row" style="margin-top:12px" id="g-actions"></div>
     </div>
@@ -292,9 +293,10 @@ async function loadGoogle() {
   $('#join-as').textContent = g.signedIn ? `The bot joins as ${g.account || 'its Google account'}` : 'The bot asks to join as a guest (no Google account)';
   if (!$('#g-status')) return;
   $('#g-vnc').href = g.vncUrl || '#';
-  $('#g-vnc-step').hidden = !g.vncUrl; $('#g-novnc-step').hidden = !!g.vncUrl;
+  $('#g-screen-step').hidden = !g.onScreen;
+  $('#g-vnc-step').hidden = g.onScreen || !g.vncUrl; $('#g-novnc-step').hidden = g.onScreen || !!g.vncUrl;
   $('#g-steps').hidden = !g.loginOpen;
-  $('#g-status').innerHTML = g.loginOpen ? 'The sign-in window is open on the server.'
+  $('#g-status').innerHTML = g.loginOpen ? (g.onScreen ? 'The sign-in window is open.' : 'The sign-in window is open on the server.')
     : g.signedIn ? `<span class="set">✓ Signed in</span> as <b>${esc(g.account || 'unknown account')}</b>. Bots join Meet with this account.`
     : 'Not signed in. YoMeet joins as an anonymous guest, which Google often refuses from a server ("You can\'t join this video call"). Sign it in to a Google account to fix that.';
   $('#g-actions').innerHTML = g.loginOpen

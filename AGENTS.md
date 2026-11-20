@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Instructions for coding agents (Claude Code, Codex, etc.) installing, running or changing YoMeet. Humans: see README.md.
+Instructions for coding agents (Claude Code, Codex, etc.) working on YoMeet. Installing it for someone? Follow [AGENT_INSTALL.md](AGENT_INSTALL.md). Humans: see README.md.
 
 ## What this is
 
@@ -14,34 +14,11 @@ TypeScript (ESM) is run directly with `tsx`. There is no build step.
 
 ## Install
 
-Run the setup script. It is idempotent and safe to re-run:
+**To install YoMeet for a user, follow [AGENT_INSTALL.md](AGENT_INSTALL.md) step by step.** It covers the setup script, the keys and the Google sign-in that need the human, starting the dashboard, verifying, and what to report back.
 
-```bash
-scripts/setup.sh           # installs what it can, then reports; exit 0 = ready
-scripts/setup.sh --check   # report only, install nothing
-```
+In short: `scripts/setup.sh` installs and checks everything it can (exit 0 = ready; `--check` = report only). Fix its `TODO` lines and re-run it. Lines starting with `HUMAN:` need the user.
 
-It handles:
-- `npm install`
-- Playwright Chromium (and its system libraries on Linux, via passwordless sudo if available)
-- Xvfb on Linux
-- `.env` from `.env.example`
-- building the Docker sandbox image
-- checking the ElevenLabs key and the Claude login
-- a typecheck
-
-It prints `TODO` lines for anything it couldn't do. Fix them and re-run until it exits 0.
-
-### Steps that need the human
-
-Don't try to work around these; ask the user:
-1. **ElevenLabs API key.** It goes in `.env` as `ELEVENLABS_API_KEY` and needs text-to-speech and speech-to-text access.
-2. **Claude login.** Ask the user to run `claude setup-token` themselves, since it needs a browser, and put the token in `.env` as `CLAUDE_CODE_OAUTH_TOKEN`. An existing `~/.claude/.credentials.json` also works. Alternatively, `BRAIN=api` with `ANTHROPIC_API_KEY`.
-3. **Docker access.** If `docker info` fails, the user may need to be added to the `docker` group (`sudo usermod -aG docker $USER`), then log out and back in. Or set `SANDBOX=none`.
-4. **Google sign-in for the bot.** Once the dashboard is running: Settings → Google account → Sign in to Google. The human signs in in the Chrome window that opens, on their screen or through VNC on a server, then presses Done. Never ask for or handle their Google password.
-5. **Admitting the bot** into a meeting, in Meet.
-
-Don't put secrets in files other than `.env`, and never commit `.env`. It's git-ignored.
+Never ask for or handle the user's Google password. Don't put secrets anywhere but `.env`, and never commit `.env` (it's git-ignored).
 
 ## Run
 
@@ -50,7 +27,10 @@ npm run server                                  # dashboard on http://127.0.0.1:
 npm start -- https://meet.google.com/abc-defg-hij   # or one bot from the command line
 ```
 
-- **Servers without a display:** the dashboard uses Xvfb on `YOMEET_DISPLAY` (default `:99`), and `bin/yomeet` wraps itself in `xvfb-run`.
+- **Displays:**
+  - On Linux the dashboard runs bots on a private Xvfb display, `YOMEET_DISPLAY` (default `:99`). The Google sign-in window uses the desktop when `$DISPLAY` is set.
+  - On macOS everything uses the normal screen.
+  - `bin/yomeet` wraps itself in `xvfb-run` when there's no display.
 - **Remote dashboard:** either set `DASHBOARD_PASSWORD` (the server refuses non-loopback `HOST` without it), or put it behind a reverse proxy with auth.
 - **Running as a service:** see `sandbox/yomeet.service` and the README.
 
@@ -78,6 +58,7 @@ A real end-to-end test needs a human in a Meet call. Ask them to start a meeting
 | `src/server.ts`, `web/index.html` | Dashboard API and UI (settings in `.env`, bots as child processes) |
 | `src/login.ts` | Google sign-in window for the dashboard |
 | `src/config.ts` | All settings (env vars, documented in `.env.example`) |
+| `scripts/setup.sh` | Idempotent installer/checker used by AGENT_INSTALL.md |
 
 ## Conventions
 

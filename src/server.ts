@@ -16,6 +16,11 @@ const PORT = Number(process.env.PORT || 8090);
 const HOST = process.env.HOST || '127.0.0.1';
 const MAX_BOTS = Number(process.env.MAX_BOTS || 2);
 const DISPLAY = process.env.YOMEET_DISPLAY || ':99';
+// Linux: bots run on a private Xvfb display so they stay off your screen. The Google sign-in window
+// goes to your desktop when the server was started from one ($DISPLAY set), else to that Xvfb display.
+// macOS/Windows: everything uses the normal screen.
+const VIRTUAL = process.platform === 'linux';
+const DESKTOP = VIRTUAL && !process.env.YOMEET_DISPLAY ? process.env.DISPLAY || '' : '';
 const startEnv = { ...(existsSync(ENV_FILE) ? parseEnv(readFileSync(ENV_FILE)) : {}), ...process.env };
 // Optional: a noVNC (or other) viewer of DISPLAY, linked from the dashboard for the Google sign-in.
 const VNC_URL = startEnv.VNC_URL || '';
@@ -103,7 +108,15 @@ let xvfb: ChildProcess | null = null;
 function ensureDisplay() {
   if (xvfb && xvfb.exitCode === null) return;
   xvfb = spawn('Xvfb', [DISPLAY, '-screen', '0', '1280x800x24', '-nolisten', 'tcp'], { stdio: 'ignore' });
+  xvfb.on('error', (e) => { console.error(`[server] can't start Xvfb (${e.message}). Install it: sudo apt install xvfb`); xvfb = null; });
   xvfb.on('exit', () => (xvfb = null));
+}
+/** DISPLAY for a child process: the virtual display (started if needed), the desktop, or nothing (macOS). */
+function displayEnv(forLogin = false): Record<string, string> {
+  if (!VIRTUAL) return {};
+  if (forLogin && DESKTOP) return { DISPLAY: DESKTOP };
+  ensureDisplay();
+  return { DISPLAY };
 }
 
 function startBot(url: string, name?: string): Bot {
@@ -116,9 +129,8 @@ function startBot(url: string, name?: string): Bot {
     throw new HttpError(400, 'That doesn\'t look like a Google Meet link (https://meet.google.com/abc-defg-hij)');
   }
   if (!readEnv().ELEVENLABS_API_KEY) throw new HttpError(400, 'Add your ElevenLabs API key in Settings first');
-  ensureDisplay();
   // Fresh env from .env each launch (overrides whatever the server was started with).
-  const env = { ...process.env, ...readEnv(), DISPLAY, HEADLESS: 'false', ...(name ? { BOT_NAME: name } : {}) };
+  const env = { ...process.env, ...readEnv(), ...displayEnv(), HEADLESS: 'false', ...(name ? { BOT_NAME: name } : {}) };
   const proc = spawn(process.execPath, ['--import', 'tsx', 'src/index.ts', url], { cwd: ROOT, env, stdio: ['ignore', 'pipe', 'pipe'] });
   const id = `${Date.now().toString(36)}`;
   const bot: Bot = { id, url, name: name || readEnv().BOT_NAME || 'YoMeet', startedAt: new Date().toISOString(), status: 'starting', proc, logs: [] };
@@ -145,13 +157,12 @@ let login: { proc: ChildProcess; out: string } | null = null;
 
 function googleView() {
   const env = readEnv();
-  return { signedIn: !!env.PROFILE_DIR && existsSync(env.PROFILE_DIR), account: env.GOOGLE_ACCOUNT || null, loginOpen: !!login, vncUrl: VNC_URL };
+  return { signedIn: !!env.PROFILE_DIR && existsSync(env.PROFILE_DIR), account: env.GOOGLE_ACCOUNT || null, loginOpen: !!login, vncUrl: VNC_URL, onScreen: !VIRTUAL || !!DESKTOP };
 }
 function startLogin() {
   if (login) throw new HttpError(409, 'The login window is already open');
-  ensureDisplay();
   const proc = spawn(process.execPath, ['--import', 'tsx', 'src/login.ts', GOOGLE_PROFILE], {
-    cwd: ROOT, env: { ...process.env, DISPLAY }, stdio: ['ignore', 'pipe', 'pipe'],
+    cwd: ROOT, env: { ...process.env, ...displayEnv(true) }, stdio: ['ignore', 'pipe', 'pipe'],
   });
   const l = { proc, out: '' };
   proc.stdout!.on('data', (d) => (l.out += d));
